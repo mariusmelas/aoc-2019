@@ -31,9 +31,8 @@ int *load_program(char *pathname, int *num_integers) {
 	fgets(program_string, fsize + 1,file);
 	fclose(file);
 
-	printf("Before execution:\n%s\n", program_string);
-
-
+	//printf("Before execution:\n%s\n", program_string);
+	
 	// Get number of integers
 	*num_integers = 1;
 	for(char *c = program_string; *c != '\0'; c++) {
@@ -75,6 +74,7 @@ int *load_program(char *pathname, int *num_integers) {
 	The struct is a instruction, that has a opcode and operands.
 */
 struct Instruction {
+	int instruction;
 	int opcode;
 	int a;
 	int b;
@@ -93,6 +93,8 @@ struct Instruction fetch_instruction(int *program, int *PC) {
 
 	// n is all digits of instruction, must be parsed.
 	int  n = program[*PC];
+	instruction.instruction = n;
+
 	// The two rightmost digits is the opcode
 	instruction.opcode = n % 100;
 	n = n / 100;
@@ -105,9 +107,9 @@ struct Instruction fetch_instruction(int *program, int *PC) {
 	}
 
 	// Add modes to the struct
-	instruction.mode_a = modes[0];
+	instruction.mode_a = modes[2];
 	instruction.mode_b = modes[1];
-	instruction.mode_c = modes[2];
+	instruction.mode_c = modes[0];
 
 	if(instruction.opcode == 1 || instruction.opcode == 2) {
 		// Instruction 1 and 2 has three operands
@@ -121,9 +123,6 @@ struct Instruction fetch_instruction(int *program, int *PC) {
 		instruction.a = program[*PC + 1];
 		*PC += 2;
 	}
-
-	printf("opcode: %d a: %d b: %d c: %d\n", instruction.opcode,instruction.mode_a,instruction.mode_b,instruction.mode_c);
-
 
 	return instruction;
 }
@@ -147,18 +146,20 @@ int main() {
 	
 	// Load program
 	int num_integers;
-	int *program = load_program("./test_program.txt", &num_integers);
+	int *program = load_program("./day_5_input.txt", &num_integers);
 	
 	// Execute program
 	int PC = 0;  // Program counter
 	int run_program = 1;
 	// Helper variables used for the instructions
 	int a,b;
-
+	// Keep the previous instruction for debugging
+	struct Instruction prev_instruction;
 
 	while(run_program) {
 		
 		struct Instruction instruction = fetch_instruction(program, &PC);
+		//printf("opcode: %d\n", instruction.opcode);
 		switch(instruction.opcode) {
 			case 1:	
 				// OPCODE 1	- ADD
@@ -170,19 +171,22 @@ int main() {
 				// OPCODE 2 - MULTIPLY
 				set_operand_value(program, &a,instruction.a, instruction.mode_a);
 				set_operand_value(program, &b,instruction.b, instruction.mode_b);
-				printf("a: %d, b: %d\n", a,b);
 				program[instruction.c] = a * b;
 				break;
 			case 3:
 				// OPCODE 3 - INPUT
 				char input[10];
 				int input_integer;
+				printf("INPUT: ");
 				fgets(input, 10,stdin);
 				program[instruction.a] = atoi(input);
 				break;
 			case 4:
 				// OPCODE 4 - OUTPUT
-				printf("OUT: %d\n", program[instruction.a]);
+				set_operand_value(program, &a,instruction.a, instruction.mode_a);
+				printf("OUT: %d\n", a);
+				break;
+
 			case 99:
 				// HALT
 				run_program = 0;
@@ -190,16 +194,19 @@ int main() {
 			default:
 				break;
 		}
+
+		prev_instruction = instruction;
 		
 	}
 
+	/*
 	// Print the result
 	printf("After execution:\n");
 	for(int i = 0; i < num_integers; i++) {
 		printf("%d ", program[i]);
 	}
 	printf("\n");
-
+*/
 	free(program);
 	return -1;
 }
