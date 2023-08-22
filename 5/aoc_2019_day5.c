@@ -2,6 +2,18 @@
 #include <stdlib.h>
 
 
+/*
+	Prints the current program,
+	used for debugging
+*/
+void print_program(int *program, size_t length) {
+
+	for(int i = 0; i < length; i++) {
+		printf("%d,", program[i]);
+	}
+	printf("\n");
+}
+
 
 /*
 	load_program reads in a program from plain text file (Integers separated by commas).
@@ -111,8 +123,8 @@ struct Instruction fetch_instruction(int *program, int *PC) {
 	instruction.mode_b = modes[1];
 	instruction.mode_c = modes[0];
 
-	if(instruction.opcode == 1 || instruction.opcode == 2) {
-		// Instruction 1 and 2 has three operands
+	if(instruction.opcode == 1 || instruction.opcode == 2 || instruction.opcode == 7 || instruction.opcode == 8) {
+		// Instruction 1,2,7,8 has three operands
 		instruction.a = program[*PC + 1];
 		instruction.b = program[*PC + 2];
 		instruction.c = program[*PC + 3];
@@ -122,6 +134,11 @@ struct Instruction fetch_instruction(int *program, int *PC) {
 		// Instruction 3 and 4 has one operand
 		instruction.a = program[*PC + 1];
 		*PC += 2;
+	} else if(instruction.opcode == 5 || instruction.opcode == 6) {
+		// Instruction 5 and 6 has 2 operands
+		instruction.a = program[*PC + 1];
+		instruction.b = program[*PC + 2];
+		*PC += 3;
 	}
 
 	return instruction;
@@ -146,21 +163,27 @@ int main() {
 	
 	// Load program
 	int num_integers;
-	int *program = load_program("./day_5_input.txt", &num_integers);
+	int *program = load_program("./test_program.txt", &num_integers);
 	
 	// Execute program
 	int PC = 0;  // Program counter
 	int run_program = 1;
 	// Helper variables used for the instructions
-	int a,b;
+	int a,b,c;
 	// Keep the previous instruction for debugging
 	struct Instruction prev_instruction;
 
 	while(run_program) {
 		
 		struct Instruction instruction = fetch_instruction(program, &PC);
-		//printf("opcode: %d\n", instruction.opcode);
+		//printf("instruction: %d opcode: %d PC: %d\n", instruction.instruction, instruction.opcode, PC);
+		//print_program(program, num_integers);
+		//if(PC == 5)
+		//	break;
 		switch(instruction.opcode) {
+			case 0:
+				printf("Invalid opcode %d at PC = %d\n", instruction.opcode, PC);
+				exit(-1);
 			case 1:	
 				// OPCODE 1	- ADD
 				set_operand_value(program, &a,instruction.a, instruction.mode_a);
@@ -186,7 +209,63 @@ int main() {
 				set_operand_value(program, &a,instruction.a, instruction.mode_a);
 				printf("OUT: %d\n", a);
 				break;
+			case 5:
+				// OPCODE 5 - jump-if-true
+				// if the first parameter is non-zero, it sets the instruction pointer 
+				// to the value from the second parameter. Otherwise, it does nothing.
+				
+				set_operand_value(program, &a,instruction.a, instruction.mode_a);
+				set_operand_value(program, &b,instruction.b, instruction.mode_b);
+				if(a != 0) {
+					PC = b;
+				}
+				
+				break;
+			case 6:
+				// OPCODE 6 - jump-if-false
+				// if the first parameter is zero, it sets the instruction pointer 
+				// to the value from the second parameter. Otherwise, it does nothing.
+				set_operand_value(program, &a,instruction.a, instruction.mode_a);
+				set_operand_value(program, &b,instruction.b, instruction.mode_b);
+				if(a == 0) {
+					PC = b;
+				}
+				
+				break;
+			
+			case 7:
+				// OPCODE 7 - less-than
+				// if the first parameter is less than the second parameter, 
+				// it stores 1 in the position given by the third parameter. Otherwise, it stores 0.
 
+				set_operand_value(program, &a,instruction.a, instruction.mode_a);
+				set_operand_value(program, &b,instruction.b, instruction.mode_b);
+				set_operand_value(program, &c,instruction.c, instruction.mode_c);
+
+				if(a < b) {
+					program[instruction.c] = 1;
+				
+				} else {
+					program[instruction.c] = 0;
+
+				}
+				break;
+			case 8:
+				// OPCODE 8 - equals
+				// f the first parameter is equal to the second parameter, 
+				// it stores 1 in the position given by the third parameter. Otherwise, it stores 0.
+				set_operand_value(program, &a,instruction.a, instruction.mode_a);
+				set_operand_value(program, &b,instruction.b, instruction.mode_b);
+				set_operand_value(program, &c,instruction.c, instruction.mode_c);
+				
+				if(a == b) {
+					program[instruction.c] = 1;
+
+				} else {
+					program[instruction.c] = 0;
+
+				}
+				break;
 			case 99:
 				// HALT
 				run_program = 0;
